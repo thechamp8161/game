@@ -7,8 +7,6 @@ from enemy import Enemy
 from mission import Mission
 from item import Item
 from medkit import Medkit
-from key import Key
-from door import Door
 
 class Game:
     def __init__(self, map_filepath):
@@ -24,14 +22,12 @@ class Game:
                 obj = None
                 if tile == 'P':
                     player_pos = (x, y)
+                elif tile == 'W': # Pistol
+                    obj = Weapon(x, y, "Pistol", "A standard issue pistol.", damage=10, max_ammo=12, ammo=12)
                 elif tile == 'S': # Shotgun
                     obj = Weapon(x, y, "Shotgun", "A powerful pump-action shotgun.", damage=30, max_ammo=8, ammo=8)
-                elif tile == 'K': # Key
-                    obj = Key(x, y, "Key", "A small metal key.", key_id=1)
                 elif tile == 'M': # Medkit
                     obj = Medkit(x, y, "Medkit", "A first-aid kit.", healing_amount=50)
-                elif tile == 'D': # Door
-                    obj = Door(x, y, key_id=1)
                 elif tile == 'E': # Guard
                     obj = Enemy(x, y, "Guard", "A watchful guard.", health=30, damage=10)
                 elif tile == 'H': # Heavy Guard
@@ -52,8 +48,6 @@ class Game:
     def get_description(self, x, y):
         obj = self.map.get_object_at(x, y)
         if obj and obj is not self.player:
-            if isinstance(obj, Door):
-                return f"a door that is {'locked' if obj.locked else 'unlocked'}"
             return f"a {obj.name}"
 
         tile = self.map.get_tile(x, y)
@@ -91,11 +85,6 @@ class Game:
 
         if self.map.get_tile(new_x, new_y) == '#':
             print("You can't move there.")
-            return
-
-        dest_obj = self.map.get_object_at(new_x, new_y)
-        if isinstance(dest_obj, Door) and dest_obj.locked:
-            print(f"The {dest_obj.name} is locked.")
             return
 
         del self.map.game_objects[(self.player.x, self.player.y)]
@@ -136,22 +125,6 @@ class Game:
             self.player.equip_weapon(weapon_to_equip)
         else:
             print(f"You don't have a weapon called '{weapon_name}'.")
-
-    def unlock_door(self):
-        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-            door = self.map.get_object_at(self.player.x + dx, self.player.y + dy)
-            if isinstance(door, Door):
-                if not door.locked:
-                    print("The door is already unlocked.")
-                    return
-                player_key = next((item for item in self.player.inventory if isinstance(item, Key) and item.key_id == door.key_id), None)
-                if player_key:
-                    door.unlock()
-                    return
-                else:
-                    print("You don't have the key for this door.")
-                    return
-        print("There is no door here to unlock.")
 
     def get_nearby_enemies(self):
         return [obj for obj in self.map.game_objects.values() if isinstance(obj, Enemy) and abs(obj.x - self.player.x) <= 1 and abs(obj.y - self.player.y) <= 1 and obj is not self.player]
@@ -234,10 +207,8 @@ class Game:
             elif action == "equip":
                 if args: self.equip_weapon(args)
                 else: print("Equip what?")
-            elif action == "unlock":
-                self.unlock_door()
             elif action.startswith("debug"): self.map.display()
-            else: print("Unknown command. Try 'look', 'move', 'take', 'use', 'equip', 'unlock', or 'quit'.")
+            else: print("Unknown command. Try 'look', 'move', 'take', 'use', 'equip', or 'quit'.")
 
 if __name__ == "__main__":
     sys.path.insert(0, '.')
